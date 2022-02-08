@@ -1,4 +1,4 @@
-// search_server_s1_t2_v2.cpp
+//#include "search_server.h"
 
 #include <algorithm>
 #include <cmath>
@@ -11,20 +11,8 @@
 
 using namespace std;
 
+/* Подставьте вашу реализацию класса SearchServer сюда */
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
-
-string ReadLine() {
-    string s;
-    getline(cin, s);
-    return s;
-}
-
-int ReadLineWithNumber() {
-    int result;
-    cin >> result;
-    ReadLine();
-    return result;
-}
 
 vector<string> SplitIntoWords(const string& text) {
     vector<string> words;
@@ -84,7 +72,7 @@ public:
     // findtopdocs 1/3 - check status
     vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
         return FindTopDocuments(raw_query,
-                                [&status](int document_id, const DocumentStatus& compared_status, int rating)
+                                [&status](int, const DocumentStatus& compared_status, int)
             { return compared_status == status; });
     }
 
@@ -231,7 +219,6 @@ private:
                 continue;
             }
             const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);
-            // check key_mapper
             for (const auto [doc_id, relevance] : word_to_document_freqs_.at(word)) {
                 if (key_mapper(doc_id, documents_.at(doc_id).status, documents_.at(doc_id).rating)) {
                     document_to_relevance[doc_id] += relevance * inverse_document_freq;
@@ -260,41 +247,581 @@ private:
     }
 };
 
-
-// ==================== для примера =========================
-
-
-void PrintDocument(const Document& document) {
-    cout << "{ "s
-        << "document_id = "s << document.id << ", "s
-        << "relevance = "s << document.relevance << ", "s
-        << "rating = "s << document.rating
-        << " }"s << endl;
+/* 
+   Подставьте сюда вашу реализацию макросов 
+   ASSERT, ASSERT_EQUAL, ASSERT_EQUAL_HINT, ASSERT_HINT и RUN_TEST
+*/
+template <typename T, typename U>
+void AssertEqualImpl(const T& t, const U& u, const string& t_str, const string& u_str, const string& file,
+                     const string& func, unsigned line, const string& hint) {
+    if (t != u) {
+        cout << boolalpha;
+        cout << file << "("s << line << "): "s << func << ": "s;
+        cout << "ASSERT_EQUAL("s << t_str << ", "s << u_str << ") failed: "s;
+        cout << t << " != "s << u << "."s;
+        if (!hint.empty()) {
+            cout << " Hint: "s << hint;
+        }
+        cout << endl;
+        abort();
+    }
 }
 
+#define ASSERT_EQUAL(a, b) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, ""s)
+
+#define ASSERT_EQUAL_HINT(a, b, hint) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, (hint))
+
+void AssertImpl(bool value, const string& expr_str, const string& file, const string& func, unsigned line,
+                const string& hint) {
+    if (!value) {
+        cout << file << "("s << line << "): "s << func << ": "s;
+        cout << "ASSERT("s << expr_str << ") failed."s;
+        if (!hint.empty()) {
+            cout << " Hint: "s << hint;
+        }
+        cout << endl;
+        abort();
+    }
+}
+
+#define ASSERT(expr) AssertImpl(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, ""s)
+
+#define ASSERT_HINT(expr, hint) AssertImpl(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, (hint))
+
+template <typename F>
+void RunTestImpl(const F& Func, const string& func_name) {
+    Func();
+    cerr << func_name << " OK" << endl;
+}
+
+#define RUN_TEST(func) RunTestImpl((func), #func)
+
+// -------- Начало модульных тестов поисковой системы ----------
+
+// Тест проверяет, что поисковая система исключает стоп-слова при добавлении документов
+void TestExcludeStopWordsFromAddedDocumentContent() {
+    const int doc_id = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = {1, 2, 3};
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        const auto found_docs = server.FindTopDocuments("in"s);
+        ASSERT_EQUAL(found_docs.size(), 1u);
+        const Document& doc0 = found_docs[0];
+        ASSERT_EQUAL(doc0.id, doc_id);
+    }
+
+    {
+        SearchServer server;
+        server.SetStopWords("in the"s);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        ASSERT_HINT(server.FindTopDocuments("in"s).empty(), "Stop words must be excluded from documents"s);
+    }
+}
+
+/*
+Разместите код остальных тестов здесь
+*/
+void TestAddDocument()
+{
+    const int doc_id1 = 42;
+    const string content1 = "cat in the city"s;
+    const vector<int> ratings1 = {1, 2, 3};
+    const int doc_id2 = 24;
+    const string content2 = "fat out of city"s;
+    const vector<int> ratings2 = {1, 2, 3, 6};
+    {
+        SearchServer server;
+        const auto found_docs = server.FindTopDocuments("cat"s);
+        ASSERT(server.FindTopDocuments("cat"s).empty());
+    }
+    
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs = server.FindTopDocuments("cat"s);
+        ASSERT_EQUAL(found_docs.size(), 1u);
+        const Document& doc0 = found_docs[0];
+        ASSERT(doc0.id == doc_id1);
+    }
+    
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        const auto found_docs = server.FindTopDocuments("city"s);
+        ASSERT_EQUAL(found_docs.size(), 2u);
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        ASSERT(doc1.id == doc_id1 || doc1.id == doc_id2);
+        ASSERT(doc0.id == doc_id1 || doc0.id == doc_id2);
+    } 
+}
+
+void TestMinusWords()
+{
+    const int doc_id1 = 42;
+    const string content1 = "cat in the city"s;
+    const vector<int> ratings1 = {1, 2, 3};
+    const int doc_id2 = 24;
+    const string content2 = "fat of the city"s;
+    const vector<int> ratings2 = {1, 2, 3, 6};
+    const int doc_id3 = 33;
+    const string content3 = "fat of the country"s;
+    const vector<int> ratings3 = {1, 6};
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        ASSERT(server.FindTopDocuments("-fat"s).empty());
+    }
+    
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        const auto found_docs = server.FindTopDocuments("city -fat"s);
+        ASSERT_EQUAL(found_docs.size(), 1u);
+        const Document& doc0 = found_docs[0];
+        ASSERT(doc0.id == doc_id1);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        const auto found_docs = server.FindTopDocuments("-city fat"s);
+        ASSERT_EQUAL(found_docs.size(), 1u);
+        const Document& doc0 = found_docs[0];
+        ASSERT(doc0.id == doc_id3);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        const auto found_docs = server.FindTopDocuments("-city fat cat"s);
+        ASSERT(found_docs.size() == 1);
+        const Document& doc0 = found_docs[0];
+        ASSERT(doc0.id == doc_id3);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        const auto found_docs = server.FindTopDocuments("city country -cat"s);
+        ASSERT(found_docs.size() == 2);
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        ASSERT(doc0.id == doc_id2 || doc0.id == doc_id3);
+        ASSERT(doc1.id == doc_id2 || doc1.id == doc_id3);
+    }
+    
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        const auto found_docs = server.FindTopDocuments("city -dog"s);
+        ASSERT(found_docs.size() == 2);
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        ASSERT(doc0.id == doc_id1 || doc0.id == doc_id2);
+        ASSERT(doc1.id == doc_id1 || doc1.id == doc_id2);
+    }
+}
+
+void TestMatchDocument()
+{
+    const int doc_id1 = 42;
+    const string content1 = "cat in the city"s;
+    const vector<int> ratings1 = {1, 2, 3};
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs = server.MatchDocument("cat"s, 42);
+        const auto words = get<0>(found_docs);
+        const auto status = get<1>(found_docs);
+        ASSERT(words.size() == 1);
+        ASSERT(count(words.begin(), words.end(), "bat"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "city"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "cat"s) == 1);
+        ASSERT(status == DocumentStatus::ACTUAL);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs = server.MatchDocument("-bat"s, 42);
+        const auto words = get<0>(found_docs);
+        ASSERT(words.size() == 0);
+    }
+    
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs = server.MatchDocument("cat -bat"s, 42);
+        const auto words = get<0>(found_docs);
+        const auto status = get<1>(found_docs);
+        ASSERT(words.size() == 1);
+        ASSERT(count(words.begin(), words.end(), "bat"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "city"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "cat"s) == 1);
+        ASSERT(status == DocumentStatus::ACTUAL);
+    }
+    
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs = server.MatchDocument("cat -city"s, 42);
+        const auto words = get<0>(found_docs);
+        ASSERT(words.size() == 0);
+        ASSERT(count(words.begin(), words.end(), "bat"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "city"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "cat"s) == 0);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs = server.MatchDocument("cat in -bat"s, 42);
+        const auto words = get<0>(found_docs);
+        const auto status = get<1>(found_docs);
+        ASSERT(words.size() == 2);
+        ASSERT(count(words.begin(), words.end(), "bat"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "city"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "in"s) == 1);
+        ASSERT(count(words.begin(), words.end(), "cat"s) == 1);
+        ASSERT(status == DocumentStatus::ACTUAL);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs = server.MatchDocument("cat in -city"s, 42);
+        const auto words = get<0>(found_docs);
+        const auto status = get<1>(found_docs);
+        ASSERT(words.size() == 0);
+        ASSERT(count(words.begin(), words.end(), "bat"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "city"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "in"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "cat"s) == 0);
+        ASSERT(status == DocumentStatus::ACTUAL);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs = server.MatchDocument("the city in cat"s, 42);
+        const auto words = get<0>(found_docs);
+        const auto status = get<1>(found_docs);
+        ASSERT(words.size() == 4);
+        ASSERT(count(words.begin(), words.end(), "bat"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "city"s) == 1);
+        ASSERT(count(words.begin(), words.end(), "in"s) == 1);
+        ASSERT(count(words.begin(), words.end(), "cat"s) == 1);
+        ASSERT(count(words.begin(), words.end(), "the"s) == 1);
+        ASSERT(status == DocumentStatus::ACTUAL);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs = server.MatchDocument("the city in cat -bat"s, 42);
+        const auto words = get<0>(found_docs);
+        const auto status = get<1>(found_docs);
+        ASSERT(words.size() == 4);
+        ASSERT(count(words.begin(), words.end(), "bat"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "city"s) == 1);
+        ASSERT(count(words.begin(), words.end(), "in"s) == 1);
+        ASSERT(count(words.begin(), words.end(), "cat"s) == 1);
+        ASSERT(count(words.begin(), words.end(), "the"s) == 1);
+        ASSERT(status == DocumentStatus::ACTUAL);
+    }
+    
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const auto found_docs = server.MatchDocument("the city in cat -in"s, 42);
+        const auto words = get<0>(found_docs);
+        ASSERT(words.size() == 0);
+        ASSERT(count(words.begin(), words.end(), "bat"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "city"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "in"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "cat"s) == 0);
+        ASSERT(count(words.begin(), words.end(), "the"s) == 0);
+    }
+}
+
+void TestSortRelevance()
+{
+    const int doc_id1 = 42;
+    const string content1 = "cat in the city"s;
+    const vector<int> ratings1 = {1, 2, 3};
+    const int doc_id2 = 24;
+    const string content2 = "fat of the city"s;
+    const vector<int> ratings2 = {1, 2, 3, 6};
+    const int doc_id3 = 33;
+    const string content3 = "fat of the country"s;
+    const vector<int> ratings3 = {1, 6};
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        const auto found_docs = server.FindTopDocuments("the"s);
+        ASSERT(found_docs.size() == 3);
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        const Document& doc2 = found_docs[2];
+        ASSERT(doc0.id == doc_id2);
+        ASSERT(doc1.id == doc_id3);
+        ASSERT(doc2.id == doc_id1);
+    }
+    
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        const auto found_docs = server.FindTopDocuments("the cat"s);
+        ASSERT(found_docs.size() == 3);
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        const Document& doc2 = found_docs[2];
+        ASSERT(doc0.id == doc_id1);
+        ASSERT(doc1.id == doc_id2);
+        ASSERT(doc2.id == doc_id3);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        const auto found_docs = server.FindTopDocuments("the fat country"s);
+        ASSERT(found_docs.size() == 3);
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        const Document& doc2 = found_docs[2];
+        ASSERT(doc0.id == doc_id3);
+        ASSERT(doc1.id == doc_id2);
+        ASSERT(doc2.id == doc_id1);
+    }
+    
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        const auto found_docs = server.FindTopDocuments("the fat country bat"s);
+        ASSERT(found_docs.size() == 3);
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        const Document& doc2 = found_docs[2];
+        ASSERT(doc0.id == doc_id3);
+        ASSERT(doc1.id == doc_id2);
+        ASSERT(doc2.id == doc_id1);
+    }
+}
+
+void TestRatingCalculation()
+{
+    const int doc_id1 = 42;
+    const string content1 = "cat in the city"s;
+    const vector<int> ratings1 = {};
+    const int doc_id2 = 24;
+    const string content2 = "fat of the city"s;
+    const vector<int> ratings2 = {0, 0, 0, 0};
+    const int doc_id3 = 33;
+    const string content3 = "fat of the country"s;
+    const vector<int> ratings3 = {0, 1, 0, 0};
+    const int doc_id4 = 3;
+    const string content4 = "bat of the country"s;
+    const vector<int> ratings4 = {1, 1, 0, 1};
+    const int doc_id5 = 4;
+    const string content5 = "bat of the city"s;
+    const vector<int> ratings5 = {1, 1, 0, 1};
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        server.AddDocument(doc_id4, content4, DocumentStatus::ACTUAL, ratings4);
+        server.AddDocument(doc_id5, content5, DocumentStatus::ACTUAL, ratings5);
+        const auto found_docs = server.FindTopDocuments("the"s);
+        ASSERT(found_docs.size() == 5);
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        const Document& doc2 = found_docs[2];
+        const Document& doc3 = found_docs[3];
+        const Document& doc4 = found_docs[4];
+        ASSERT(doc0.rating == 0);
+        ASSERT(doc1.rating == 0);
+        ASSERT(doc2.rating == 0);
+        ASSERT(doc3.rating == 0);
+        ASSERT(doc4.rating == 0);
+    }
+    
+    const int doc_id6 = 42;
+    const string content6 = "cat in the city one"s;
+    const vector<int> ratings6 = {1, 2, 3};
+    const int doc_id7 = 24;
+    const string content7 = "fat of the city one"s;
+    const vector<int> ratings7 = {1, 2, -3, 0};
+    const int doc_id8 = 33;
+    const string content8 = "fat of the country one"s;
+    const vector<int> ratings8 = {6, 6, 5, -5};
+    const int doc_id9 = 3;
+    const string content9 = "bat of the country one"s;
+    const vector<int> ratings9 = {-6, -6, -5, 5};
+    const int doc_id99 = 4;
+    const string content99 = "the alabama town"s;
+    const vector<int> ratings99 = {5, 1, -7, -3, -1};
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id6, content6, DocumentStatus::ACTUAL, ratings6);
+        server.AddDocument(doc_id7, content7, DocumentStatus::ACTUAL, ratings7);
+        server.AddDocument(doc_id8, content8, DocumentStatus::ACTUAL, ratings8);
+        server.AddDocument(doc_id9, content9, DocumentStatus::ACTUAL, ratings9);
+        server.AddDocument(doc_id99, content99, DocumentStatus::ACTUAL, ratings99);
+        const auto found_docs = server.FindTopDocuments("cat in the city one fat"s);
+        ASSERT(found_docs.size() == 5);
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        const Document& doc2 = found_docs[2];
+        const Document& doc3 = found_docs[3];
+        const Document& doc4 = found_docs[4];
+        ASSERT(doc0.rating == 2);
+        ASSERT(doc1.rating == 0);
+        ASSERT(doc2.rating == 3);
+        ASSERT(doc3.rating == -3);
+        ASSERT(doc4.rating == -1);
+    }
+}
+
+void TestStatusOfFindDocuments()
+{
+    const int doc_id6 = 42;
+    const string content6 = "cat in the city one"s;
+    const vector<int> ratings6 = {1, 2, 3};
+    const int doc_id7 = 24;
+    const string content7 = "fat of the city one"s;
+    const vector<int> ratings7 = {1, 2, -3, 0};
+    const int doc_id8 = 33;
+    const string content8 = "fat of the country one"s;
+    const vector<int> ratings8 = {6, 6, 5, -5};
+    const int doc_id9 = 3;
+    const string content9 = "bat of the country one"s;
+    const vector<int> ratings9 = {-6, -6, -5, 5};
+    const int doc_id99 = 4;
+    const string content99 = "the alabama town"s;
+    const vector<int> ratings99 = {5, 1, -7, -3, -1};
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id6, content6, DocumentStatus::ACTUAL, ratings6);
+        server.AddDocument(doc_id7, content7, DocumentStatus::IRRELEVANT, ratings7);
+        server.AddDocument(doc_id8, content8, DocumentStatus::BANNED, ratings8);
+        server.AddDocument(doc_id9, content9, DocumentStatus::REMOVED, ratings9);
+        server.AddDocument(doc_id99, content99, DocumentStatus::ACTUAL, ratings99);
+        const auto found_docs0 = server.FindTopDocuments("cat in the city one fat"s, DocumentStatus::ACTUAL);
+        ASSERT(found_docs0.size() == 2);
+        const Document& doc0 = found_docs0[0];
+        const Document& doc1 = found_docs0[1];
+        ASSERT(doc0.id == doc_id6);
+        ASSERT(doc1.id == doc_id99);
+        
+        const auto found_docs1 = server.FindTopDocuments("cat in the city one fat"s, DocumentStatus::IRRELEVANT);
+        ASSERT(found_docs1.size() == 1);
+        const Document& doc2 = found_docs1[0];
+        ASSERT(doc2.id == doc_id7);
+
+        const auto found_docs2 = server.FindTopDocuments("cat in the city one fat"s, DocumentStatus::BANNED);
+        ASSERT(found_docs2.size() == 1);
+        const Document& doc3 = found_docs2[0];
+        ASSERT(doc3.id == doc_id8);
+
+        const auto found_docs3 = server.FindTopDocuments("cat in the city one fat"s, DocumentStatus::REMOVED);
+        ASSERT(found_docs3.size() == 1);
+        const Document& doc4 = found_docs3[0];
+        ASSERT(doc4.id == doc_id9);
+    }
+}
+
+void TestCheckingRelevance()
+{
+    const int doc_id1 = 42;
+    const string content1 = "cat in the city"s;
+    const vector<int> ratings1 = {};
+    const int doc_id2 = 24;
+    const string content2 = "fat of the city"s;
+    const vector<int> ratings2 = {0, 0, 0, 0};
+    const int doc_id3 = 33;
+    const string content3 = "fat of the country"s;
+    const vector<int> ratings3 = {0, 1, 0, 0};
+    const int doc_id4 = 3;
+    const string content4 = "bat of the country"s;
+    const vector<int> ratings4 = {1, 1, 0, 1};
+    const int doc_id5 = 4;
+    const string content5 = "bat of the city"s;
+    const vector<int> ratings5 = {1, 1, 0, 1};
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        server.AddDocument(doc_id4, content4, DocumentStatus::ACTUAL, ratings4);
+        server.AddDocument(doc_id5, content5, DocumentStatus::ACTUAL, ratings5);
+        const auto found_docs = server.FindTopDocuments("cat in the city one fat"s);
+        ASSERT(found_docs.size() == 5);
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        const Document& doc2 = found_docs[2];
+        const Document& doc3 = found_docs[3];
+        const Document& doc4 = found_docs[4];
+        ASSERT(0.932424 < doc0.relevance && doc0.relevance < 0.932426);
+        ASSERT(doc0.id == doc_id1);
+        ASSERT(0.356778 < doc1.relevance && doc1.relevance < 0.356780);
+        ASSERT(doc1.id == doc_id2);
+        ASSERT(0.229072 < doc2.relevance && doc2.relevance < 0.229074);
+        ASSERT(doc2.id == doc_id3);
+        ASSERT(0.127705 < doc3.relevance && doc3.relevance < 0.127707);
+        ASSERT(doc3.id == doc_id5);
+        ASSERT(doc4.relevance == 0);
+        ASSERT(doc4.id == doc_id4);
+    }
+}
+
+// Функция TestSearchServer является точкой входа для запуска тестов
+void TestSearchServer() {
+    RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
+    RUN_TEST(TestAddDocument);
+    RUN_TEST(TestMinusWords);
+    RUN_TEST(TestMatchDocument);
+    RUN_TEST(TestSortRelevance);
+    RUN_TEST(TestRatingCalculation);
+    RUN_TEST(TestStatusOfFindDocuments);
+    RUN_TEST(TestCheckingRelevance);
+}
+
+// --------- Окончание модульных тестов поисковой системы -----------
+
 int main() {
-    SearchServer search_server;
-    search_server.SetStopWords("и в на"s);
-
-    search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
-    search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
-    search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
-    search_server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
-
-    cout << "ACTUAL by default:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
-        PrintDocument(document);
-    }
-
-    cout << "BANNED:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
-        PrintDocument(document);
-    }
-
-    cout << "Even ids:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
-        PrintDocument(document);
-    }
-
-    return 0;
+    TestSearchServer();
+    // Если вы видите эту строку, значит все тесты прошли успешно
+    cout << "Search server testing finished"s << endl;
 }
