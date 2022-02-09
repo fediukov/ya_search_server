@@ -1,9 +1,8 @@
-//#include "search_server.h"
-
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <map>
+#include <numeric>
 #include <set>
 #include <string>
 #include <utility>
@@ -13,6 +12,8 @@ using namespace std;
 
 /* Подставьте вашу реализацию класса SearchServer сюда */
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+
+const double EPSILON = 1e-6;
 
 vector<string> SplitIntoWords(const string& text) {
     vector<string> words;
@@ -90,7 +91,7 @@ public:
 
         sort(matched_documents.begin(), matched_documents.end(),
             [](const Document& lhs, const Document& rhs) {
-                if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                if (abs(lhs.relevance - rhs.relevance) < EPSILON) {
                     return lhs.rating > rhs.rating;
                 }
                 else {
@@ -158,10 +159,7 @@ private:
         if (ratings.empty()) {
             return 0;
         }
-        int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
+        int rating_sum = accumulate(ratings.begin(), ratings.end(), 0);
         return rating_sum / static_cast<int>(ratings.size());
     }
 
@@ -584,9 +582,12 @@ void TestSortRelevance()
         const Document& doc0 = found_docs[0];
         const Document& doc1 = found_docs[1];
         const Document& doc2 = found_docs[2];
-        ASSERT(doc0.id == doc_id2);
-        ASSERT(doc1.id == doc_id3);
-        ASSERT(doc2.id == doc_id1);
+        ASSERT(doc0.relevance == 0);
+        ASSERT(doc1.relevance == 0);
+        ASSERT(doc2.relevance == 0);
+        ASSERT(doc0.id == doc_id1 || doc0.id == doc_id2 || doc0.id == doc_id3);
+        ASSERT(doc1.id == doc_id1 || doc1.id == doc_id2 || doc1.id == doc_id3);
+        ASSERT(doc2.id == doc_id1 || doc2.id == doc_id2 || doc2.id == doc_id3);
     }
     
     {
@@ -599,9 +600,12 @@ void TestSortRelevance()
         const Document& doc0 = found_docs[0];
         const Document& doc1 = found_docs[1];
         const Document& doc2 = found_docs[2];
+        ASSERT(abs(doc0.relevance - 0.274653) < EPSILON);
+        ASSERT(doc1.relevance == 0);
+        ASSERT(doc2.relevance == 0);
         ASSERT(doc0.id == doc_id1);
-        ASSERT(doc1.id == doc_id2);
-        ASSERT(doc2.id == doc_id3);
+        ASSERT(doc1.id == doc_id2 || doc1.id == doc_id3);
+        ASSERT(doc2.id == doc_id3 || doc2.id == doc_id2);
     }
 
     {
@@ -614,6 +618,9 @@ void TestSortRelevance()
         const Document& doc0 = found_docs[0];
         const Document& doc1 = found_docs[1];
         const Document& doc2 = found_docs[2];
+        ASSERT(abs(doc0.relevance - 0.376019) < EPSILON);
+        ASSERT(abs(doc1.relevance - 0.101366) < EPSILON);
+        ASSERT(doc2.relevance == 0);
         ASSERT(doc0.id == doc_id3);
         ASSERT(doc1.id == doc_id2);
         ASSERT(doc2.id == doc_id1);
@@ -624,11 +631,14 @@ void TestSortRelevance()
         server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
         server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
-        const auto found_docs = server.FindTopDocuments("the fat country bat"s);
+        const auto found_docs = server.FindTopDocuments("the fat country bat city fat"s);
         ASSERT(found_docs.size() == 3);
         const Document& doc0 = found_docs[0];
         const Document& doc1 = found_docs[1];
         const Document& doc2 = found_docs[2];
+        ASSERT(abs(doc0.relevance - 0.376019) < EPSILON);
+        ASSERT(abs(doc1.relevance - 0.202733) < EPSILON);
+        ASSERT(abs(doc2.relevance - 0.101366) < EPSILON);
         ASSERT(doc0.id == doc_id3);
         ASSERT(doc1.id == doc_id2);
         ASSERT(doc2.id == doc_id1);
@@ -793,13 +803,13 @@ void TestCheckingRelevance()
         const Document& doc2 = found_docs[2];
         const Document& doc3 = found_docs[3];
         const Document& doc4 = found_docs[4];
-        ASSERT(0.932424 < doc0.relevance && doc0.relevance < 0.932426);
+        ASSERT(abs(doc0.relevance - 0.932425) < EPSILON);
         ASSERT(doc0.id == doc_id1);
-        ASSERT(0.356778 < doc1.relevance && doc1.relevance < 0.356780);
+        ASSERT(abs(doc1.relevance - 0.356779) < EPSILON);
         ASSERT(doc1.id == doc_id2);
-        ASSERT(0.229072 < doc2.relevance && doc2.relevance < 0.229074);
+        ASSERT(abs(doc2.relevance - 0.229073) < EPSILON);
         ASSERT(doc2.id == doc_id3);
-        ASSERT(0.127705 < doc3.relevance && doc3.relevance < 0.127707);
+        ASSERT(abs(doc3.relevance - 0.127706) < EPSILON);
         ASSERT(doc3.id == doc_id5);
         ASSERT(doc4.relevance == 0);
         ASSERT(doc4.id == doc_id4);
