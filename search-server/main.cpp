@@ -40,7 +40,6 @@ vector<string> SplitIntoWords(const string& text) {
     if (!word.empty()) {
         words.push_back(word);
     }
-
     return words;
 }
 
@@ -127,7 +126,6 @@ public:
     // поиск топ-документов
     template <typename DocumentPredicate>
     vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
-        // result.clear();
         Query query = ParseQuery(raw_query);
         auto matched_documents = FindAllDocuments(query, document_predicate);
         sort(matched_documents.begin(), matched_documents.end(), [](const Document& lhs, const Document& rhs) {
@@ -140,9 +138,6 @@ public:
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
             matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
         }
-
-        // Exchange matched_documents and result instead of deep copying
-        // result.swap(matched_documents);
         return matched_documents;
     }
 
@@ -165,8 +160,7 @@ public:
     int GetDocumentId(int index) const {
         if (!(index >= 0 && index < GetDocumentCount())) {
             throw out_of_range("индекс вне пределов допустимого диапазона");
-            return document_ids_[index];
-        }  else {
+        } else {
             return document_ids_[index];
         }
     }
@@ -193,7 +187,6 @@ public:
                 break;
             }
         }
-        
         tuple<vector<string>, DocumentStatus> result = {matched_words, documents_.at(document_id).status};
         return result;
     }
@@ -274,7 +267,6 @@ private:
         if (!IsValidWord(text)) {
               throw invalid_argument("спец.симолы в запросе");
        }
-
         result = QueryWord{text, is_minus, IsStopWord(text)};
         return result;
     }
