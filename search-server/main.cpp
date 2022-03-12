@@ -6,9 +6,8 @@
 #include "paginator.h"
 #include "read_input_functions.h"
 #include "request_queue.h"
-#include "search_server.h"
+//#include "search_server.h"
 
-//
 void AddDocument(SearchServer& search_server, int document_id, const std::string& document, DocumentStatus status,
     const std::vector<int>& ratings) {
     using namespace std;
@@ -20,7 +19,6 @@ void AddDocument(SearchServer& search_server, int document_id, const std::string
     }
 }
 
-//
 void FindTopDocuments(const SearchServer& search_server, const std::string& raw_query) {
     using namespace std;
     cout << "Результаты поиска по запросу: "s << raw_query << endl;
@@ -34,7 +32,6 @@ void FindTopDocuments(const SearchServer& search_server, const std::string& raw_
     }
 }
 
-//
 void MatchDocuments(const SearchServer& search_server, const std::string& query) {
     using namespace std;
     try {

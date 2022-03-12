@@ -3,8 +3,6 @@
 #include <iostream>
 #include <vector>
 
-using namespace std;
-
 template <typename Container>
 auto Paginate(const Container& c, size_t page_size) {
     return Paginator(begin(c), end(c), page_size);
