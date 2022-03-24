@@ -4,6 +4,28 @@
 #include <string>
 
 void RemoveDuplicates(SearchServer& search_server) {
+	// right version
+	std::set<std::set<std::string>> doc_map;
+	for (auto it = search_server.begin(); it != search_server.end();)
+	{
+		std::set<std::string> check;
+		for (const auto& [key, value] : search_server.GetWordFrequencies(*it))
+		{
+			check.insert(key);
+		}
+		if (doc_map.count(check))
+		{
+			std::cout << "Found duplicate document id " << *it << std::endl;
+			auto id_del = it++;
+			search_server.RemoveDocument(*id_del);
+		}
+		else
+		{
+			doc_map.insert(check);
+			++it;
+		}
+	}
+	/* // my version
 	std::map<int, std::set<std::string>> doc_map;
 	for (auto it = search_server.begin(); it != search_server.end(); ++it)
 	{
@@ -30,5 +52,5 @@ void RemoveDuplicates(SearchServer& search_server) {
 			}
 		}
 	}
-
+	*/
 }

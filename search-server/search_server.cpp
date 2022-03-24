@@ -16,7 +16,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
         word_to_document_freqs_[word][document_id] += inv_word_count;
     }
     documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
-    document_ids_.push_back(document_id);
+    document_ids_.insert(document_id);
 }
 
 
@@ -39,18 +39,19 @@ int SearchServer::GetDocumentCount() const {
 }*/
 
 // new
-std::vector<int>::const_iterator SearchServer::begin() const {
+std::set<int>::const_iterator SearchServer::begin() const {
     return document_ids_.begin();
 }
 
 // new
-std::vector<int>::const_iterator SearchServer::end() const {
+std::set<int>::const_iterator SearchServer::end() const {
     return document_ids_.end();
 }
 
 // new
-const std::map<std::string, double> SearchServer::GetWordFrequencies(int document_id) const {
-    std::map<std::string, double> result;
+const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
+    static std::map<std::string, double> result;
+    result.clear();
     for (const auto& [key, value] : word_to_document_freqs_)
     {
         auto it = value.find(document_id);
@@ -65,25 +66,34 @@ const std::map<std::string, double> SearchServer::GetWordFrequencies(int documen
 // new
 void SearchServer::RemoveDocument(int document_id) {
     // remove from document_ids_
+    /* // (remove with iterator)
     auto it_1 = std::find(document_ids_.begin(), document_ids_.end(), document_id);
     if (it_1 != document_ids_.end())
     {
         document_ids_.erase(it_1);
-    }
+    } */
+    // (remove with key)
+    document_ids_.erase(document_id);
     // remove from documents_
+    /* // (remove with iterator)
     auto it_2 = documents_.find(document_id);
     if (it_2 != documents_.end())
     {
         documents_.erase(it_2);
-    }
+    } */
+    // (remove with key)
+    documents_.erase(document_id);
     // remove from word_to_document_freqs_
     for (auto& [key, value] : word_to_document_freqs_)
     {
+        /* // (remove with iterator)
         auto it_3 = value.find(document_id);
         if (it_3 != value.end())
         {
             value.erase(it_3);
-        }
+        } */
+        // (remove with key)
+        value.erase(document_id);
     }
 }
 
