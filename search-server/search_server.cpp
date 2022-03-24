@@ -34,8 +34,57 @@ int SearchServer::GetDocumentCount() const {
     return documents_.size();
 }
 
-int SearchServer::GetDocumentId(int index) const {
+/*int SearchServer::GetDocumentId(int index) const {
     return document_ids_.at(index);
+}*/
+
+// new
+std::vector<int>::const_iterator SearchServer::begin() const {
+    return document_ids_.begin();
+}
+
+// new
+std::vector<int>::const_iterator SearchServer::end() const {
+    return document_ids_.end();
+}
+
+// new
+const std::map<std::string, double> SearchServer::GetWordFrequencies(int document_id) const {
+    std::map<std::string, double> result;
+    for (const auto& [key, value] : word_to_document_freqs_)
+    {
+        auto it = value.find(document_id);
+        if (it != value.end())
+        {
+            result.emplace(key, (*it).second);
+        }
+    }
+    return result;
+}
+
+// new
+void SearchServer::RemoveDocument(int document_id) {
+    // remove from document_ids_
+    auto it_1 = std::find(document_ids_.begin(), document_ids_.end(), document_id);
+    if (it_1 != document_ids_.end())
+    {
+        document_ids_.erase(it_1);
+    }
+    // remove from documents_
+    auto it_2 = documents_.find(document_id);
+    if (it_2 != documents_.end())
+    {
+        documents_.erase(it_2);
+    }
+    // remove from word_to_document_freqs_
+    for (auto& [key, value] : word_to_document_freqs_)
+    {
+        auto it_3 = value.find(document_id);
+        if (it_3 != value.end())
+        {
+            value.erase(it_3);
+        }
+    }
 }
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
@@ -65,13 +114,11 @@ bool SearchServer::IsStopWord(const std::string& word) const {
     return stop_words_.count(word) > 0;
 }
 
-// /*
 bool SearchServer::IsValidWord(const std::string& word) {
     return none_of(word.begin(), word.end(), [](char c) {
         return c >= '\0' && c < ' ';
         });
 }
-// */
 
 std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string& text) const {
     std::vector<std::string> words;

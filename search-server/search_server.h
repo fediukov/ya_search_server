@@ -28,7 +28,12 @@ public:
     std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
 
     int GetDocumentCount() const;
-    int GetDocumentId(int index) const;
+    //int GetDocumentId(int index) const;
+    // 4 x new
+    std::vector<int>::const_iterator begin() const;
+    std::vector<int>::const_iterator end() const;
+    const std::map<std::string, double> GetWordFrequencies(int document_id) const;
+    void RemoveDocument(int document_id);
 
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
 
