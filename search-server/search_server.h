@@ -56,7 +56,7 @@ private:
     std::map<int, DocumentData> documents_;
     std::set<int> document_ids_;
     //
-    std::map<int, std::set<std::string>> id_to_words_;
+    std::map<int, std::map<std::string, double>> document_to_word_freqs_;
 
     bool IsStopWord(const std::string& word) const;
     static bool IsValidWord(const std::string& word);
