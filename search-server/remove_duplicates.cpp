@@ -2,6 +2,7 @@
 
 #include <map>
 #include <string>
+#include <set>
 
 void RemoveDuplicates(SearchServer& search_server) {
 	// right version
@@ -9,15 +10,17 @@ void RemoveDuplicates(SearchServer& search_server) {
 	for (auto it = search_server.begin(); it != search_server.end();)
 	{
 		std::set<std::string> check;
-		for (const auto& [key, value] : search_server.GetWordFrequencies(*it))
+		for (const auto& [word, freq] : search_server.GetWordFrequencies(*it))
 		{
-			check.insert(key);
-		}
+			//check = search_server.GetWordFrequencies(*it)::id_to_words;
+			check.insert(word);
+		} 
+		//extern std::set<std::string> id_to_words;
 		if (doc_map.count(check))
 		{
 			std::cout << "Found duplicate document id " << *it << std::endl;
-			auto id_del = it++;
-			search_server.RemoveDocument(*id_del);
+			// auto id_del = it++;
+			search_server.RemoveDocument(*it++);
 		}
 		else
 		{
