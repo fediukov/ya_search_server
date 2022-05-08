@@ -12,6 +12,10 @@
 #include "request_queue.h"
 #include "search_server.h"
 
+void AddDocument(SearchServer& search_server, int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
+void FindTopDocuments(const SearchServer& search_server, const std::string& raw_query);
+void MatchDocuments(const SearchServer& search_server, const std::string& query);
+
 // BanchMark for Test03,05
 /*std::string GenerateWord(std::mt19937& generator, int max_length);
 std::vector<std::string> GenerateDictionary(std::mt19937& generator, int word_count, int max_length);

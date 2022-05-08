@@ -2,6 +2,13 @@
 
 using namespace std;
 
+Document::Document(int id, double relevance, int rating)
+    : id(id)
+    , relevance(relevance)
+    , rating(rating)
+{
+}
+
 void PrintDocument(const Document& document) {
     //using namespace std::string_literals;
     cout << "{ "s
