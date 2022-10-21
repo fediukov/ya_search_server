@@ -1,2 +1,2 @@
-# cpp-search-server
+# Search Server
 Поисковая система
