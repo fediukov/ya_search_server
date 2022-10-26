@@ -44,10 +44,6 @@ int SearchServer::GetDocumentCount() const {
     return documents_.size();
 }
 
-/*int SearchServer::GetDocumentId(int index) const {
-    return document_ids_.at(index);
-}*/
-
 std::set<int>::const_iterator SearchServer::begin() const {
     return document_ids_.begin();
 }
@@ -145,9 +141,6 @@ SearchServer::MatchDocument(const std::execution::sequenced_policy& policy, cons
         matched_words.begin(), matched_words.end());
     auto last = unique(matched_words.begin(), matched_words.end());
     matched_words.erase(last, matched_words.end()); //*/
-
-    // doing slower if it is nedeed
-    //for (int i = 0; i < 10000; i++) { string("slower slower"); }
 
     return { matched_words, documents_.at(document_id).status };
 }
@@ -255,7 +248,7 @@ SearchServer::Query SearchServer::ParseQuery(const std::execution::sequenced_pol
         }
     }
 
-    // sort -> unique -> erase is here for this version
+    // sort -> unique -> erase is here for this version ParseQuery
     sort(result.plus_words.begin(), result.plus_words.end());
     std::vector<std::string_view>::const_iterator last = unique(result.plus_words.begin(), result.plus_words.end());
     result.plus_words.erase(last, result.plus_words.end());
@@ -280,7 +273,7 @@ SearchServer::Query SearchServer::ParseQuery(const std::execution::parallel_poli
         }
     }
 
-    // sort -> unique -> erase is in MatchDocument for this version
+    // sort -> unique -> erase is in MatchDocument for this version ParseQuery
 
     return result;
 }

@@ -573,15 +573,16 @@ void Test10()
     }
     cout << "BANNED:"s << endl;
     // последовательная версия
-    for (const Document& document : search_server.FindTopDocuments(/*execution::seq, */"curly nasty cat"s, DocumentStatus::BANNED)) {
+    for (const Document& document : search_server.FindTopDocuments(/*execution::seq,*/"curly nasty cat"s, DocumentStatus::BANNED)) {
         PrintDocument(document);
     }
 
     cout << "Even ids:"s << endl;
     // параллельная версия
-    for (const Document& document : search_server.FindTopDocuments(/*execution::par, */"curly nasty cat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
+    for (const Document& document : search_server.FindTopDocuments(/*execution::par,*/"curly nasty cat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
         PrintDocument(document);
     }
+    std::cout << "Test 10 is done!" << std::endl;//*/
 }
 
 /* ------------------- BanchMark for Test11 -------------------- */
@@ -639,6 +640,8 @@ void Test11()
 {
     using namespace std;
 
+    std::cout << "Wait..." << std::endl;
+
     mt19937 generator;
 
     const auto dictionary = GenerateDictionary(generator, 1000, 10);
@@ -653,4 +656,5 @@ void Test11()
 
     TEST(seq);
     TEST(par);//*/
+    std::cout << "Test 11 is done!" << std::endl;
 }

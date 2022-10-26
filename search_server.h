@@ -44,7 +44,6 @@ public:
     std::set<int>::const_iterator end() const;
 
     int GetDocumentCount() const;
-    //int GetDocumentId(int index) const;
     const std::map<std::string_view, double>& GetWordFrequencies(int document_id) const;
 
     // added execution policy

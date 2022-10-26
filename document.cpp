@@ -10,7 +10,6 @@ Document::Document(int id, double relevance, int rating)
 }
 
 void PrintDocument(const Document& document) {
-    //using namespace std::string_literals;
     cout << "{ "s
         << "document_id = "s << document.id << ", "s
         << "relevance = "s << document.relevance << ", "s
@@ -18,7 +17,6 @@ void PrintDocument(const Document& document) {
 }
 
 void PrintMatchDocumentResult(int document_id, const vector<string_view>& words, DocumentStatus status) {
-    //using namespace std::string_literals;
     cout << "{ "s
         << "document_id = "s << document_id << ", "s
         << "status = "s << static_cast<int>(status) << ", "s
@@ -30,7 +28,6 @@ void PrintMatchDocumentResult(int document_id, const vector<string_view>& words,
 }
 
 ostream& operator<<(ostream& out, const Document& document) {
-    //using namespace std; 
     out << "{ "s
         << "document_id = "s << document.id << ", "s
         << "relevance = "s << document.relevance << ", "s

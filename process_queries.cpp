@@ -6,10 +6,6 @@ std::vector<std::vector<Document>> ProcessQueries(
 {
     //LOG_DURATION("ProcessQueries");
     std::vector<std::vector<Document>> result(queries.size());
-    // trivial version
-    /*for (const std::string& query : queries) {
-        result.push_back(search_server.FindTopDocuments(query));
-    }//*/
     // transform version
     std::transform(std::execution::par,
               queries.begin(), queries.end(),
